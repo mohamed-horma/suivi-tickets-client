@@ -72,3 +72,80 @@ docker compose down && docker compose up -d
 | 4 | Application accessible sur http://localhost:8000 | ✅ |
 | 5 | Migrations appliquées automatiquement au démarrage | ✅ |
 | 6 | Guide de démarrage en moins de 10 étapes | ✅ (5 étapes) |
+
+---
+
+## INFRA-02 — Modèle de données
+
+### Objectif
+Définir et implémenter l'ensemble de la structure de données : utilisateurs, projets, phases, lots, tickets, commentaires, abonnements, SyncJob et SyncLog.
+
+### Hiérarchie
+
+```
+Projet → Phase → Lot → Ticket
+User ↔ Projet  (Assignment)
+User ↔ Lot     (Abonnment)
+```
+
+### Modèles
+
+| Modèle | Rôle |
+|---|---|
+| `User` | Admin ou Client, authentification par email |
+| `Project` | Projet logiciel |
+| `Phase` | Regroupement de lots dans un projet |
+| `Lot` | Conteneur de tickets dans une phase |
+| `Assignment` | Association Client ↔ Projet |
+| `Abonnment` | Abonnement Client ↔ Lot (notifications) |
+| `Ticket` | Entité centrale, référence `#BP-AAAA-NNNNN` |
+| `Comment` | Commentaire immuable attaché à un ticket |
+| `Screenshot` | Capture d'écran attachée à un ticket |
+| `Notification` | Notification email ou Slack par ticket |
+| `SyncJob` / `SyncLog` | Audit de synchronisation Notion |
+
+### Champs d'un ticket
+
+| Champ | Description |
+|---|---|
+| `reference` | Auto-généré au format `#BP-AAAA-NNNNN` (service INFRA-03) |
+| `type` | `bug`, `suggestion`, `new_request` |
+| `what_tested` | Ce qui a été testé |
+| `observed_result` | Résultat observé |
+| `expected_result` | Résultat attendu |
+| `note` | Commentaire optionnel |
+| `status` | 9 états du cycle de vie |
+
+### Immuabilité des champs
+
+Les champs `what_tested`, `observed_result`, `expected_result`, `type` d'un ticket et le contenu d'un commentaire sont immuables après création.
+Enforcement : `readonly_fields` dans l'admin + service `update_ticket()` (INFRA-05).
+
+### Générer et appliquer les migrations
+
+```bash
+# Générer la migration automatiquement
+docker exec appliTicket-backend python manage.py makemigrations
+
+# Appliquer
+docker exec appliTicket-backend python manage.py migrate
+```
+
+### Vérification via l'admin
+
+```bash
+docker exec -it appliTicket-backend python manage.py createsuperuser
+# http://localhost:8000/admin/
+```
+
+### Critères d'évaluation
+
+| # | Critère | Statut |
+|---|---|---|
+| 7 | Tous les objets métier modélisés | ✅ |
+| 8 | Ticket contient tous les champs requis | ✅ |
+| 9 | Référence `#BP-AAAA-NNNNN` (générée en INFRA-03) | ✅ |
+| 10 | Relations correctement définies | ✅ |
+| 11 | Migrations générées par `makemigrations` | ✅ |
+| 12 | Admin affiche tous les objets avec leurs champs | ✅ |
+| 13 | Champs immuables : `readonly_fields` admin + service INFRA-05 | ✅ |
