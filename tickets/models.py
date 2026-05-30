@@ -67,7 +67,7 @@ class Phase(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"{self.project.name} / {self.name}"
+        return self.name
 
 
 class Lot(models.Model):
@@ -79,7 +79,7 @@ class Lot(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"{self.phase} / {self.name}"
+        return self.name
 
 
 class Assignment(models.Model):
@@ -99,7 +99,8 @@ class Assignment(models.Model):
         unique_together = ("user", "project")
 
     def __str__(self) -> str:
-        return f"{self.user.email} → {self.project.name}"
+        # user_id / project_id accèdent aux colonnes FK directement — aucune query
+        return f"user={self.user_id} → project={self.project_id}"
 
 
 class Abonnment(models.Model):
@@ -114,7 +115,8 @@ class Abonnment(models.Model):
         unique_together = ("user", "lot")
 
     def __str__(self) -> str:
-        return f"{self.user.email} ↔ {self.lot}"
+        # user_id / lot_id accèdent aux colonnes FK directement — aucune query
+        return f"user={self.user_id} ↔ lot={self.lot_id}"
 
 
 class Ticket(models.Model):
@@ -178,7 +180,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"{self.user.email} sur {self.ticket}"
+        return self.text[:50]
 
 
 class Screenshot(models.Model):
