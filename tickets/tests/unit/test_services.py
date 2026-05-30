@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from tickets.exceptions import TicketValidationError
-from tickets.models import Lot, Phase, Project, User
+from tickets.models import Lot, Phase, Project, Ticket, User
 from tickets.services import create_ticket
 
 
@@ -21,6 +21,16 @@ class CreateTicketTest(TestCase):
         phase = Phase.objects.create(project=project, name="Phase 1")
         self.lot = Lot.objects.create(phase=phase, name="Lot 1")
 
+        # État initial : un ticket existe déjà pour l'année courante
+        self.existing_ticket = create_ticket(
+            lot=self.lot,
+            created_by=self.user,
+            ticket_type=Ticket.Type.BUG,
+            what_tested="Description détaillée de ce qui a été testé dans l'application",
+            observed_result="Description détaillée du résultat observé lors du test effectué",
+            expected_result="Description détaillée du résultat attendu lors du test effectué",
+        )
+
     # ── Création valide ───────────────────────────────────────────────────
 
     def test_create_ticket__valid_data__returns_ticket_with_reference(self) -> None:
@@ -30,7 +40,7 @@ class CreateTicketTest(TestCase):
         ticket = create_ticket(
             lot=self.lot,
             created_by=self.user,
-            ticket_type="bug",
+            ticket_type=Ticket.Type.SUGGESTION,
             what_tested="Description détaillée de ce qui a été testé dans l'application",
             observed_result="Description détaillée du résultat observé lors du test effectué",
             expected_result="Description détaillée du résultat attendu lors du test effectué",
@@ -43,30 +53,21 @@ class CreateTicketTest(TestCase):
         self.assertEqual(ticket.created_by, self.user)
 
     def test_create_ticket__increments_counter_per_year(self) -> None:
-        # GIVEN: un premier ticket déjà créé dans l'année
-        first = create_ticket(
-            lot=self.lot,
-            created_by=self.user,
-            ticket_type="bug",
-            what_tested="Description détaillée de ce qui a été testé dans l'application",
-            observed_result="Description détaillée du résultat observé lors du test effectué",
-            expected_result="Description détaillée du résultat attendu lors du test effectué",
-        )
+        # GIVEN: un ticket existe déjà pour l'année courante (créé dans setUp)
 
         # WHEN: un second ticket est créé dans la même année
-        second = create_ticket(
+        new_ticket = create_ticket(
             lot=self.lot,
             created_by=self.user,
-            ticket_type="suggestion",
+            ticket_type=Ticket.Type.NEW_REQUEST,
             what_tested="Description détaillée de ce qui a été testé dans l'application",
             observed_result="Description détaillée du résultat observé lors du test effectué",
             expected_result="Description détaillée du résultat attendu lors du test effectué",
         )
 
-        # THEN: les deux références sont différentes et incrémentées
-        self.assertNotEqual(first.reference, second.reference)
-        self.assertIn("-00001", first.reference)
-        self.assertIn("-00002", second.reference)
+        # THEN: la référence est incrémentée par rapport au ticket existant
+        self.assertIn("-00001", self.existing_ticket.reference)
+        self.assertIn("-00002", new_ticket.reference)
 
     # ── Violations des règles métier ──────────────────────────────────────
 
@@ -78,7 +79,7 @@ class CreateTicketTest(TestCase):
             create_ticket(
                 lot=self.lot,
                 created_by=self.user,
-                ticket_type="bug",
+                ticket_type=Ticket.Type.BUG,
                 what_tested="trop court",
                 observed_result="Description détaillée du résultat observé lors du test effectué",
                 expected_result="Description détaillée du résultat attendu lors du test effectué",
@@ -92,7 +93,7 @@ class CreateTicketTest(TestCase):
             create_ticket(
                 lot=self.lot,
                 created_by=self.user,
-                ticket_type="bug",
+                ticket_type=Ticket.Type.BUG,
                 what_tested="Description détaillée de ce qui a été testé dans l'application",
                 observed_result="trop court",
                 expected_result="Description détaillée du résultat attendu lors du test effectué",
@@ -106,7 +107,7 @@ class CreateTicketTest(TestCase):
             create_ticket(
                 lot=self.lot,
                 created_by=self.user,
-                ticket_type="bug",
+                ticket_type=Ticket.Type.BUG,
                 what_tested="Description détaillée de ce qui a été testé dans l'application",
                 observed_result="Description détaillée du résultat observé lors du test effectué",
                 expected_result="court",
@@ -120,7 +121,7 @@ class CreateTicketTest(TestCase):
             create_ticket(
                 lot=self.lot,
                 created_by=self.user,
-                ticket_type="suggestion",
+                ticket_type=Ticket.Type.SUGGESTION,
                 what_tested="Description détaillée de ce qui a été testé dans l'application",
                 observed_result="Description détaillée du résultat observé lors du test effectué",
                 expected_result="Description détaillée du résultat attendu lors du test effectué",
@@ -128,13 +129,13 @@ class CreateTicketTest(TestCase):
             )
 
     def test_create_ticket__note_none__creates_ticket_without_note(self) -> None:
-        # GIVEN: note non fournie (optionnelle)
+        # GIVEN: note non fournie (champ optionnel)
 
         # WHEN: create_ticket est appelé sans note
         ticket = create_ticket(
             lot=self.lot,
             created_by=self.user,
-            ticket_type="new_request",
+            ticket_type=Ticket.Type.NEW_REQUEST,
             what_tested="Description détaillée de ce qui a été testé dans l'application",
             observed_result="Description détaillée du résultat observé lors du test effectué",
             expected_result="Description détaillée du résultat attendu lors du test effectué",

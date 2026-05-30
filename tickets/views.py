@@ -1,9 +1,11 @@
-from rest_framework import permissions, status, viewsets
+from django.db.models import QuerySet
+from rest_framework import permissions, serializers as drf_serializers, status, viewsets
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from . import selectors
 from .exceptions import TicketValidationError
+from .models import Lot, Phase, Project, Ticket
 from .serializers import (
     LotSerializer,
     PhaseSerializer,
@@ -18,7 +20,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Project]:
         return selectors.list_projects()
 
 
@@ -26,7 +28,7 @@ class PhaseViewSet(viewsets.ModelViewSet):
     serializer_class = PhaseSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Phase]:
         return selectors.list_phases()
 
 
@@ -34,19 +36,19 @@ class LotViewSet(viewsets.ModelViewSet):
     serializer_class = LotSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Lot]:
         return selectors.list_lots()
 
 
 class TicketViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type[drf_serializers.BaseSerializer]:
         if self.action == "create":
             return TicketCreateSerializer
         return TicketSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Ticket]:
         return selectors.list_tickets()
 
     def create(self, request: Request) -> Response:

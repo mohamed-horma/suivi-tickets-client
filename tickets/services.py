@@ -10,24 +10,15 @@ def _build_ticket_reference(year: int, count: int) -> str:
     return f"#BP-{year}-{count:05d}"
 
 
-@transaction.atomic
-def create_ticket(
-    *,
-    lot: Lot,
-    created_by: User | None,
-    ticket_type: str,
+def _validate_ticket_content(
     what_tested: str,
     observed_result: str,
     expected_result: str,
-    note: str | None = None,
-) -> Ticket:
+    note: str | None,
+) -> None:
     """
-    Crée un nouveau ticket avec une référence unique #BP-AAAA-NNNNN.
-
-    Règles métier :
-    - what_tested, observed_result, expected_result : 20 caractères minimum.
-    - note : 10 caractères minimum si fournie.
-    - La référence est auto-incrémentée par année.
+    Valide les règles métier sur le contenu d'un ticket.
+    Fonction pure — aucun effet de bord, aucune dépendance ORM.
 
     Raises:
         TicketValidationError: si une règle métier est violée.
@@ -48,6 +39,30 @@ def create_ticket(
         raise TicketValidationError(
             "note doit contenir au moins 10 caractères."
         )
+
+
+@transaction.atomic
+def create_ticket(
+    *,
+    lot: Lot,
+    created_by: User | None,
+    ticket_type: Ticket.Type,
+    what_tested: str,
+    observed_result: str,
+    expected_result: str,
+    note: str | None = None,
+) -> Ticket:
+    """
+    Crée un nouveau ticket avec une référence unique #BP-AAAA-NNNNN.
+
+    Orchestre la validation du contenu et la persistance.
+    La référence est auto-incrémentée par année dans une transaction atomique
+    pour protéger la séquence lecture-écriture du compteur.
+
+    Raises:
+        TicketValidationError: si une règle métier est violée.
+    """
+    _validate_ticket_content(what_tested, observed_result, expected_result, note)
 
     year = timezone.now().year
     count = get_ticket_count_for_year(year) + 1

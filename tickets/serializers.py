@@ -43,11 +43,15 @@ class TicketSerializer(serializers.ModelSerializer):
 
 
 class TicketCreateSerializer(serializers.Serializer):
-    """Validation des données d'entrée pour la création d'un ticket."""
+    """Validation IO des données d'entrée pour la création d'un ticket.
+
+    Valide uniquement la présence et le type des champs.
+    Les règles métier (longueurs minimales) sont enforçées dans create_ticket().
+    """
 
     lot = serializers.PrimaryKeyRelatedField(queryset=Lot.objects.all())
     type = serializers.ChoiceField(choices=Ticket.Type.choices)
-    what_tested = serializers.CharField(min_length=20)
-    observed_result = serializers.CharField(min_length=20)
-    expected_result = serializers.CharField(min_length=20)
-    note = serializers.CharField(min_length=10, required=False, allow_null=True)
+    what_tested = serializers.CharField()
+    observed_result = serializers.CharField()
+    expected_result = serializers.CharField()
+    note = serializers.CharField(required=False, allow_null=True)
