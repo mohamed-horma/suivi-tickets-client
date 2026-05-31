@@ -1,3 +1,4 @@
 Django==5.2
 psycopg2-binary==2.9.12
 djangorestframework==3.17.1
+djangorestframework-simplejwt==5.5.0
