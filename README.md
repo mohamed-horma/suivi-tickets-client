@@ -9,6 +9,7 @@ Backend Django REST API pour la gestion de tickets clients (bugs, suggestions, n
 - [INFRA-01 — Environnement de développement](#infra-01--environnement-de-développement)
 - [INFRA-02 — Modèle de données](#infra-02--modèle-de-données)
 - [INFRA-03 — Django REST Framework](#infra-03--django-rest-framework)
+- [INFRA-04 — Authentification JWT](#infra-04--authentification-jwt)
 
 ---
 
@@ -204,7 +205,7 @@ View (orchestre uniquement — aucune logique métier)
 | `POST` | `/api/tickets/` | Crée un ticket | Oui |
 | `GET` | `/api/tickets/{id}/` | Détail d'un ticket | Oui |
 
-> **Note :** Toutes les routes nécessitent une authentification. L'authentification JWT sera ajoutée dans la branche `feature/authentification-jwt`. Pour l'instant, utiliser l'authentification de session via `/admin/`.
+> **Note :** Toutes les routes nécessitent une authentification JWT. Voir [INFRA-04](#infra-04--authentification-jwt) pour la configuration et l'utilisation des tokens.
 
 ### Pagination
 
@@ -305,3 +306,157 @@ docker exec -it appliTicket-backend python manage.py createsuperuser
 # 4. Lancer les tests
 docker exec appliTicket-backend python manage.py test --parallel
 ```
+
+---
+
+## INFRA-04 — Authentification JWT
+
+### Objectif
+Mettre en place un système d'authentification sécurisé par JSON Web Tokens. Les utilisateurs se connectent via email/mot de passe et reçoivent des tokens signés. Les mots de passe sont hachés. Les sessions sont renouvellables sans reconnexion et révocables via la déconnexion.
+
+### Cycle de vie des tokens
+
+```
+POST /api/auth/login/
+        │
+        ▼
+  access_token (60 min) ──► à envoyer dans chaque requête API
+  refresh_token (7 jours) ─► à conserver, utilisé uniquement pour renouveler
+
+        │ access_token expiré (HTTP 401)
+        ▼
+POST /api/auth/refresh/
+        │
+        ▼
+  nouveau access_token ──► reprendre les appels API
+  nouveau refresh_token ──► l'ancien est blacklisté automatiquement
+
+        │ déconnexion volontaire
+        ▼
+POST /api/auth/logout/
+        │
+        ▼
+  refresh_token blacklisté ──► toute tentative de refresh → HTTP 401
+```
+
+### Endpoints d'authentification
+
+| Méthode | URL | Description | Token requis |
+|---|---|---|---|
+| `POST` | `/api/auth/login/` | Connexion — retourne access + refresh | Non |
+| `POST` | `/api/auth/refresh/` | Renouvelle l'access token | Refresh token |
+| `POST` | `/api/auth/logout/` | Déconnexion — blackliste le refresh | Refresh token |
+
+### Utilisation
+
+**1. Connexion**
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "monmotdepasse"}'
+```
+
+Réponse `200 OK` :
+```json
+{
+  "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+Réponse `401 Unauthorized` si identifiants invalides :
+```json
+{
+  "detail": "No active account found with the given credentials"
+}
+```
+
+**2. Appeler une route protégée**
+
+```bash
+curl http://localhost:8000/api/projects/ \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Sans token ou token expiré → `401 Unauthorized` :
+```json
+{
+  "detail": "Authentication credentials were not provided."
+}
+```
+
+**3. Renouveler l'access token**
+
+```bash
+curl -X POST http://localhost:8000/api/auth/refresh/ \
+  -H "Content-Type: application/json" \
+  -d '{"refresh": "<refresh_token>"}'
+```
+
+Réponse `200 OK` :
+```json
+{
+  "access": "eyJ...(nouveau)",
+  "refresh": "eyJ...(nouveau — l'ancien est blacklisté)"
+}
+```
+
+**4. Déconnexion**
+
+```bash
+curl -X POST http://localhost:8000/api/auth/logout/ \
+  -H "Content-Type: application/json" \
+  -d '{"refresh": "<refresh_token>"}'
+```
+
+Réponse `200 OK` — le refresh token est blacklisté. Toute tentative de réutilisation retourne `401`.
+
+### Configuration
+
+| Paramètre | Valeur | Explication |
+|---|---|---|
+| `ACCESS_TOKEN_LIFETIME` | 60 minutes | Durée courte — si volé, expire rapidement |
+| `REFRESH_TOKEN_LIFETIME` | 7 jours | L'utilisateur reste connecté une semaine |
+| `ROTATE_REFRESH_TOKENS` | `True` | Chaque refresh génère un nouveau refresh token |
+| `BLACKLIST_AFTER_ROTATION` | `True` | L'ancien refresh token est révoqué automatiquement |
+
+### Sécurité des mots de passe
+
+Les mots de passe sont hachés avec **PBKDF2-SHA256** (algorithme par défaut de Django). Ils ne sont jamais stockés en clair — même en cas de fuite de la base de données, les mots de passe restent inaccessibles.
+
+```python
+# Ce que Django stocke en base
+"pbkdf2_sha256$870000$sel_aléatoire$hash_base64"
+
+# Jamais le mot de passe original
+```
+
+### Appliquer les migrations de la blacklist
+
+```bash
+# La table de blacklist est créée par rest_framework_simplejwt.token_blacklist
+docker exec appliTicket-backend python manage.py migrate
+```
+
+### Lancer les tests
+
+```bash
+# Tests d'authentification uniquement
+docker exec appliTicket-backend python manage.py test tickets.tests.unit.test_auth
+
+# Tous les tests
+docker exec appliTicket-backend python manage.py test --parallel
+```
+
+### Critères d'évaluation
+
+| # | Critère | Statut |
+|---|---|---|
+| 14 | Login valide retourne access + refresh tokens | ✅ |
+| 15 | Refresh permet de renouveler sans reconnexion | ✅ |
+| 16 | Logout invalide définitivement le refresh token | ✅ |
+| 17 | Mots de passe hachés — jamais stockés en clair | ✅ |
+| 18 | Route protégée sans token → HTTP 401 | ✅ |
+| 19 | Token expiré → HTTP 401 | ✅ |
+| 20 | Tests couvrent tous les scénarios | ⏳ (à compléter) |
