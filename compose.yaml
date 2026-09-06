@@ -10,13 +10,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   django:
     build: .
     container_name: suivi-tickets-backend
     env_file: .env
     depends_on:
-      - suivi-tickets-database
+      suivi-tickets-database:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
