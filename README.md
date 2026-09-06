@@ -147,7 +147,11 @@ Enforcement double :
 - **Admin** : `readonly_fields` dans `TicketAdmin` et `CommentAdmin`
 - **API** : `read_only_fields` dans les serializers + service `update_ticket()` (INFRA-05)
 
-### Générer et appliquer les migrations
+### Migrations
+
+Les migrations sont versionnées dans `tickets/migrations/` et appliquées automatiquement au
+démarrage par `docker compose up -d`. `makemigrations` n'est nécessaire qu'après une
+modification des modèles :
 
 ```bash
 docker exec suivi-tickets-backend python manage.py makemigrations
@@ -162,7 +166,7 @@ docker exec suivi-tickets-backend python manage.py migrate
 | 8 | Ticket contient tous les champs requis | ✅ |
 | 9 | Référence `#BP-AAAA-NNNNN` (générée par le service) | ✅ |
 | 10 | Relations correctement définies | ✅ |
-| 11 | Migrations générées par `makemigrations` | ✅ |
+| 11 | Migrations générées par `makemigrations` et versionnées | ✅ |
 | 12 | Admin affiche tous les objets avec leurs champs | ✅ |
 | 13 | Champs immuables protégés (admin + serializers) | ✅ |
 
@@ -296,17 +300,13 @@ tickets/
 ### Démarrage complet depuis zéro
 
 ```bash
-# 1. Démarrer l'environnement
+# 1. Démarrer l'environnement (les migrations sont appliquées automatiquement)
 docker compose up -d
 
-# 2. Générer et appliquer les migrations
-docker exec suivi-tickets-backend python manage.py makemigrations
-docker exec suivi-tickets-backend python manage.py migrate
-
-# 3. Créer un superuser pour tester via l'admin
+# 2. Créer un superuser pour tester via l'admin
 docker exec -it suivi-tickets-backend python manage.py createsuperuser
 
-# 4. Lancer les tests
+# 3. Lancer les tests
 docker exec suivi-tickets-backend python manage.py test --parallel
 ```
 
