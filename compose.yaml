@@ -1,5 +1,5 @@
 services:
-  appliTicket-database:
+  suivi-tickets-database:
     image: postgres:17
     env_file: .env
     environment:
@@ -13,10 +13,10 @@ services:
 
   django:
     build: .
-    container_name: appliTicket-backend
+    container_name: suivi-tickets-backend
     env_file: .env
     depends_on:
-      - appliTicket-database
+      - suivi-tickets-database
     ports:
       - "8000:8000"
     volumes:

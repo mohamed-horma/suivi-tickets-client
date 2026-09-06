@@ -1,4 +1,4 @@
-# AppliTicket
+# Suivi Tickets Client
 
 Backend Django REST API pour la gestion de tickets clients (bugs, suggestions, nouvelles demandes) sur des projets logiciels.
 
@@ -26,8 +26,8 @@ Environnement de développement local reproductible, démarrable en une seule co
 
 ```bash
 # 1. Cloner le dépôt
-git clone git@github.com:mohamed-horma/AppliTicket.git
-cd AppliTicket
+git clone git@github.com:mohamed-horma/suivi-tickets-client.git
+cd suivi-tickets-client
 
 # 2. Créer le fichier d'environnement
 cp .env.example .env
@@ -37,7 +37,7 @@ cp .env.example .env
 docker compose up -d
 
 # 4. (Optionnel) Créer un compte admin
-docker exec -it appliTicket-backend python manage.py createsuperuser
+docker exec -it suivi-tickets-backend python manage.py createsuperuser
 
 # 5. Ouvrir l'application
 # Admin : http://localhost:8000/admin/
@@ -50,21 +50,21 @@ Toutes les variables sont documentées dans `.env.example` — ce fichier est co
 
 | Variable | Description | Valeur Docker | Valeur locale |
 |---|---|---|---|
-| `POSTGRES_DB` | Nom de la base | `appliTicket_DB` | `appliTicket_DB` |
+| `POSTGRES_DB` | Nom de la base | `suivi_tickets_db` | `suivi_tickets_db` |
 | `POSTGRES_USER` | Utilisateur PostgreSQL | `suivi_tickets` | `suivi_tickets` |
 | `POSTGRES_PASSWORD` | Mot de passe | à définir | à définir |
-| `POSTGRES_HOST` | Hôte de la base | `appliTicket-database` | `localhost` |
+| `POSTGRES_HOST` | Hôte de la base | `suivi-tickets-database` | `localhost` |
 | `POSTGRES_PORT` | Port PostgreSQL | `5432` | `5432` |
 
 ### Commandes utiles
 
 ```bash
 # Migrations
-docker exec appliTicket-backend python manage.py makemigrations
-docker exec appliTicket-backend python manage.py migrate
+docker exec suivi-tickets-backend python manage.py makemigrations
+docker exec suivi-tickets-backend python manage.py migrate
 
 # Shell Django interactif
-docker exec -it appliTicket-backend python manage.py shell
+docker exec -it suivi-tickets-backend python manage.py shell
 
 # Rebuilder après modification de requirements.txt
 docker compose build django
@@ -147,8 +147,8 @@ Enforcement double :
 ### Générer et appliquer les migrations
 
 ```bash
-docker exec appliTicket-backend python manage.py makemigrations
-docker exec appliTicket-backend python manage.py migrate
+docker exec suivi-tickets-backend python manage.py makemigrations
+docker exec suivi-tickets-backend python manage.py migrate
 ```
 
 ### Critères d'évaluation
@@ -270,13 +270,13 @@ Réponse `400 Bad Request` si règle métier violée :
 
 ```bash
 # Tous les tests
-docker exec appliTicket-backend python manage.py test
+docker exec suivi-tickets-backend python manage.py test
 
 # Tests unitaires uniquement (services)
-docker exec appliTicket-backend python manage.py test tickets.tests.unit
+docker exec suivi-tickets-backend python manage.py test tickets.tests.unit
 
 # En parallèle (plus rapide)
-docker exec appliTicket-backend python manage.py test --parallel
+docker exec suivi-tickets-backend python manage.py test --parallel
 ```
 
 ### Structure des tests
@@ -297,14 +297,14 @@ tickets/
 docker compose up -d
 
 # 2. Générer et appliquer les migrations
-docker exec appliTicket-backend python manage.py makemigrations
-docker exec appliTicket-backend python manage.py migrate
+docker exec suivi-tickets-backend python manage.py makemigrations
+docker exec suivi-tickets-backend python manage.py migrate
 
 # 3. Créer un superuser pour tester via l'admin
-docker exec -it appliTicket-backend python manage.py createsuperuser
+docker exec -it suivi-tickets-backend python manage.py createsuperuser
 
 # 4. Lancer les tests
-docker exec appliTicket-backend python manage.py test --parallel
+docker exec suivi-tickets-backend python manage.py test --parallel
 ```
 
 ---
@@ -436,17 +436,17 @@ Les mots de passe sont hachés avec **PBKDF2-SHA256** (algorithme par défaut de
 
 ```bash
 # La table de blacklist est créée par rest_framework_simplejwt.token_blacklist
-docker exec appliTicket-backend python manage.py migrate
+docker exec suivi-tickets-backend python manage.py migrate
 ```
 
 ### Lancer les tests
 
 ```bash
 # Tests d'authentification uniquement
-docker exec appliTicket-backend python manage.py test tickets.tests.unit.test_auth
+docker exec suivi-tickets-backend python manage.py test tickets.tests.unit.test_auth
 
 # Tous les tests
-docker exec appliTicket-backend python manage.py test --parallel
+docker exec suivi-tickets-backend python manage.py test --parallel
 ```
 
 ### Critères d'évaluation
