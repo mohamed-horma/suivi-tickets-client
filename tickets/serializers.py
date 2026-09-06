@@ -37,8 +37,13 @@ class TicketSerializer(serializers.ModelSerializer):
             "what_tested", "observed_result", "expected_result", "note",
             "created_at",
         ]
+        # Le contenu d'un ticket est immuable après création : seul `note`
+        # reste modifiable, comme dans l'admin. `status` le deviendra quand le
+        # contrôle d'accès par rôle sera en place.
         read_only_fields = [
-            "id", "reference", "created_by", "status", "created_at",
+            "id", "reference", "lot", "created_by", "type",
+            "what_tested", "observed_result", "expected_result",
+            "status", "created_at",
         ]
 
 

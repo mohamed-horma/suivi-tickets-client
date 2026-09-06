@@ -124,7 +124,8 @@ class Ticket(models.Model):
     Ticket client : bug, suggestion ou nouvelle demande.
     Référence unique au format #BP-AAAA-NNNNN, générée à la création.
     Les champs de contenu (what_tested, observed_result, expected_result, type)
-    sont immuables après création — enforcement au niveau du service update_ticket().
+    sont immuables après création — enforcement via readonly_fields dans
+    TicketAdmin et read_only_fields dans TicketSerializer.
     """
 
     class Status(models.TextChoices):
