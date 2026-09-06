@@ -50,6 +50,9 @@ Toutes les variables sont documentées dans `.env.example` — ce fichier est co
 
 | Variable | Description | Valeur Docker | Valeur locale |
 |---|---|---|---|
+| `DJANGO_SECRET_KEY` | Clé de signature Django | à définir | à définir |
+| `DJANGO_DEBUG` | Mode debug (`False` en production) | `True` | `True` |
+| `DJANGO_ALLOWED_HOSTS` | Hôtes autorisés, séparés par des virgules | `localhost,127.0.0.1` | `localhost,127.0.0.1` |
 | `POSTGRES_DB` | Nom de la base | `suivi_tickets_db` | `suivi_tickets_db` |
 | `POSTGRES_USER` | Utilisateur PostgreSQL | `suivi_tickets` | `suivi_tickets` |
 | `POSTGRES_PASSWORD` | Mot de passe | à définir | à définir |
